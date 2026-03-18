@@ -16,20 +16,34 @@ on:
         required: false
         default: "false"
 
+# ➊ Node 24 bekapcsolása MÁR MOST (június 2. előtt is)
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 permissions:
-  contents: write   # kell a branch push-hoz
+  contents: write
 
 jobs:
   optimize:
     runs-on: ubuntu-latest
     steps:
+      # ➋ Friss actions: Node 24-kompatibilis kiadások
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
+
+      # (Ha használsz cache-t)
+      # - name: Cache (opcionális)
+      #   uses: actions/cache@v5
+      #   with:
+      #     path: ~/.cache/pip
+      #     key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-pip-
 
       - name: Install deps
         run: |
