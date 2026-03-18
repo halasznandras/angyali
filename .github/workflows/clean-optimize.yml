@@ -1,0 +1,66 @@
+name: Clean & Convert to WEBP
+
+on:
+  workflow_dispatch:
+    inputs:
+      site-root:
+        description: 'A site gyökere (pl. ".", "webroot")'
+        required: false
+        default: "."
+      push-branch:
+        description: 'Ha megadod, ide pusholjuk a módosításokat (pl. "optimize/cleaned")'
+        required: false
+        default: ""
+      keep-og-jpg:
+        description: 'Tartsunk meg 1 JPG og:image fájlt? (true/false)'
+        required: false
+        default: "false"
+
+permissions:
+  contents: write   # kell a branch push-hoz
+
+jobs:
+  optimize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install pillow beautifulsoup4 lxml
+
+      - name: Run cleaner (WEBP + purge unused)
+        env:
+          SITE_ROOT: ${{ github.event.inputs.site-root }}
+          WEBP_QUALITY: '82'
+          WEBP_METHOD: '6'
+          KEEP_OG_JPG: ${{ github.event.inputs.keep-og-jpg }}
+        run: |
+          python tools/clean_site.py
+
+      - name: Upload artifact (clean_build.zip + reports)
+        uses: actions/upload-artifact@v4
+        with:
+          name: cleaned-site
+          path: |
+            ${{ github.event.inputs.site-root }}/clean_build.zip
+            ${{ github.event.inputs.site-root }}/REPORT.md
+            ${{ github.event.inputs.site-root }}/MANIFEST_BEFORE.json
+            ${{ github.event.inputs.site-root }}/MANIFEST_AFTER.json
+
+      - name: Optional commit to branch
+        if: ${{ github.event.inputs.push-branch != '' }}
+        run: |
+          BRANCH="${{ github.event.inputs.push-branch }}"
+          git checkout -b "$BRANCH"
+          git add -A
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -m "Cleanup: remove unused assets + convert images to WEBP"
+          git push -u origin "$BRANCH"
